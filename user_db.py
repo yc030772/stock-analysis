@@ -4,15 +4,12 @@ import hashlib
 import secrets
 from pathlib import Path
 
-import psycopg2
 import streamlit as st
+from supabase import create_client
 
 
-def _conn():
-    url = st.secrets["DATABASE_URL"]
-    if "sslmode" not in url:
-        url += "?sslmode=require"
-    return psycopg2.connect(url)
+def _client():
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 
 def _hash(password: str, salt: str) -> str:
@@ -30,28 +27,27 @@ def register(username: str, password: str) -> tuple[bool, str]:
     salt = secrets.token_hex(16)
     hashed = _hash(password, salt)
     try:
-        with _conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO users (username, salt, hash) VALUES (%s, %s, %s)",
-                    (username, salt, hashed),
-                )
-    except psycopg2.errors.UniqueViolation:
-        return False, "此帳號已存在。"
+        _client().table("users").insert({
+            "username": username,
+            "salt": salt,
+            "hash": hashed,
+        }).execute()
+    except Exception as e:
+        msg = str(e).lower()
+        if "duplicate" in msg or "unique" in msg or "23505" in msg:
+            return False, "此帳號已存在。"
+        return False, f"註冊失敗：{e}"
     portfolio_dir(username).mkdir(parents=True, exist_ok=True)
     return True, "註冊成功！"
 
 
 def verify(username: str, password: str) -> bool:
     username = username.strip().lower()
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT salt, hash FROM users WHERE username = %s", (username,))
-            row = cur.fetchone()
-    if not row:
+    result = _client().table("users").select("salt, hash").eq("username", username).execute()
+    if not result.data:
         return False
-    salt, stored_hash = row
-    return stored_hash == _hash(password, salt)
+    row = result.data[0]
+    return row["hash"] == _hash(password, row["salt"])
 
 
 def portfolio_dir(username: str) -> Path:
