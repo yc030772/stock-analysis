@@ -1,10 +1,32 @@
 from __future__ import annotations
 
+import re
 import streamlit as st
 
 from agents import quick_signal
 from data import fetch_stock_name
 from db import save_db, save_groups, lookup_name
+
+
+# ── Name truncation ────────────────────────────────────────────────────────────
+
+_LEGAL_SUFFIX = re.compile(
+    r'\s+(Inc\.?|Corp\.?|Corporation|Ltd\.?|Co\.?|PLC|LLC|LP|'
+    r'NV|SA|AG|SE|Holdings?\.?|Hldgs?\.?|Technologies?|Technology|'
+    r'International|Group|Enterprises?|Partners?)$',
+    re.IGNORECASE,
+)
+
+
+def _short_name(name: str, ticker: str) -> str:
+    """Return concise name: TW stocks unchanged; US stocks strip legal suffixes."""
+    t = ticker.upper()
+    if t.endswith(".TW") or t.endswith(".TWO"):
+        return name
+    # Strip trailing legal / generic suffixes (repeat to catch e.g. "Inc. Corp.")
+    clean = _LEGAL_SUFFIX.sub("", name).strip()
+    clean = _LEGAL_SUFFIX.sub("", clean).strip()
+    return clean[:18] if len(clean) > 18 else clean
 
 
 # ── Verdict → CSS class mapping ────────────────────────────────────────────────
@@ -59,9 +81,10 @@ def _build_table_html(rows_data: list) -> str:
             'font-weight:600">持有</span>'
             if s["holding_status"] else ""
         )
+        display_name = _short_name(s["stock_name"], s["stock_id"])
         rows_html += (
             "<tr>"
-            f'<td class="wl-col-name">{s["stock_name"]}{held}</td>'
+            f'<td class="wl-col-name"><div class="wl-name-clip">{display_name}{held}</div></td>'
             f'<td style="color:var(--muted);font-size:18px">{s["stock_id"]}</td>'
             f'<td class="wl-col-num"><b>{price_str}</b>'
             f'<span style="margin-left:4px">{_pct_html(r.get("pct"))}</span></td>'

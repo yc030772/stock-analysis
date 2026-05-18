@@ -228,9 +228,14 @@ div[data-testid="stDecoration"] { display: none; }
   position: sticky;
   left: 0;
   z-index: 2;
-  min-width: 90px;
-  max-width: 150px;
+  width: 140px;
   box-shadow: 2px 0 6px rgba(0,0,0,.05);
+}
+.wl-name-clip {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .wl-pure-tbl thead th.wl-col-name { z-index: 3; }
 .wl-pure-tbl tbody tr:hover td.wl-col-name { background: var(--surf2); }
