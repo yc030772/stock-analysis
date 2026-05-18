@@ -1,0 +1,377 @@
+from __future__ import annotations
+
+from datetime import datetime as _dt
+
+import streamlit as st
+import streamlit.components.v1 as _components
+
+from db import load_db, save_db, load_groups
+from data import fetch_index
+from ui_login import render_login_page
+from ui_sidebar import render_sidebar
+from ui_heatmap import render_heatmap_tab
+from ui_analysis import render_analysis_tab
+from ui_watchlist import render_watchlist_table, render_group_tab
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIG
+# ══════════════════════════════════════════════════════════════════════════════
+st.set_page_config(
+    page_title="雙Agent 智能監控儀表板",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# THEME
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<style>
+:root {
+  --bg:       #0d1117;
+  --surf:     #161b22;
+  --surf2:    #21262d;
+  --bdr:      #30363d;
+  --txt:      #c9d1d9;
+  --muted:    #8b949e;
+  --green:    #3fb950;
+  --red:      #f85149;
+  --blue:     #58a6ff;
+  --yellow:   #e3b341;
+  --purple:   #bc8cff;
+  --orange:   #f0883e;
+  --r:        10px;
+}
+
+/* ── base ── */
+body, .stApp { background: var(--bg) !important; color: var(--txt); }
+.block-container { padding: 1.2rem 2rem 1rem !important; max-width: 100% !important; }
+* { box-sizing: border-box; }
+
+/* ── sidebar ── */
+section[data-testid="stSidebar"] > div:first-child {
+  background: var(--surf) !important;
+  border-right: 1px solid var(--bdr);
+}
+section[data-testid="stSidebar"] .block-container { padding: 1rem !important; }
+
+/* ── tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+  background: var(--surf2);
+  border-radius: var(--r);
+  padding: 4px; gap: 3px;
+  border: 1px solid var(--bdr);
+}
+.stTabs [data-baseweb="tab"] {
+  border-radius: 7px;
+  color: var(--muted);
+  padding: 8px 22px;
+  font-size: 13px; font-weight: 500;
+}
+.stTabs [aria-selected="true"] {
+  background: var(--blue) !important;
+  color: #fff !important;
+}
+
+/* ── stock card ── */
+.scard {
+  background: var(--surf2);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  margin-bottom: 3px;
+}
+.scard.active { border-color: var(--blue); background: #1c2a3a; }
+.scard-row1 { display: flex; justify-content: space-between; align-items: center; }
+.scard-id   { font-size: 14px; font-weight: 700; color: var(--txt); }
+.scard-sig  { font-size: 14px; }
+.scard-name { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.scard-row2 { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; }
+.held-tag   { background: rgba(88,166,255,.15); color: var(--blue);
+              border: 1px solid rgba(88,166,255,.3); border-radius: 4px;
+              padding: 0px 6px; font-size: 10px; }
+
+/* ── kpi grid ── */
+.kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 8px; margin: 10px 0; }
+.kbox  { background: var(--surf); border: 1px solid var(--bdr); border-radius: var(--r);
+         padding: 12px; text-align: center; }
+.klabel { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.kval   { font-size: 20px; font-weight: 700; color: var(--txt); line-height: 1.3; margin-top: 3px; }
+.kdelta { font-size: 11px; margin-top: 2px; }
+
+/* ── Taiwan convention: red = up, green = down ── */
+.pos { color: var(--red); }
+.neg { color: var(--green); }
+.neu { color: var(--muted); }
+
+/* ── signal banner ── */
+.sig-banner { border-radius: var(--r); padding: 14px 24px; margin: 12px 0;
+              font-size: 17px; font-weight: 700; text-align: center; }
+.sig-entry  { background: rgba(63,185,80,.1);  border: 1.5px solid var(--green); color: var(--green); }
+.sig-exit   { background: rgba(248,81,73,.1);  border: 1.5px solid var(--red);   color: var(--red); }
+.sig-watch  { background: rgba(139,148,158,.07); border: 1.5px solid var(--bdr); color: var(--muted); }
+
+/* ── pattern pill ── */
+.pp      { display:inline-block; border-radius:5px; padding:3px 9px;
+           font-size:11px; font-weight:600; margin:3px 2px; }
+.pp-bull { background:rgba(63,185,80,.12); color:var(--green); border:1px solid rgba(63,185,80,.3); }
+.pp-bear { background:rgba(248,81,73,.12); color:var(--red);   border:1px solid rgba(248,81,73,.3); }
+
+/* ── section title ── */
+.sec-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase;
+             letter-spacing:1px; margin:18px 0 8px; border-bottom:1px solid var(--bdr); padding-bottom:5px; }
+
+/* ── report card ── */
+.rpt      { background:var(--surf); border:1px solid var(--bdr); border-radius:var(--r);
+            padding:14px 18px; margin:8px 0; font-size:13px; line-height:1.7; }
+.rpt-bull { border-left: 4px solid var(--green); }
+.rpt-bear { border-left: 4px solid var(--red); }
+.rpt-neu  { border-left: 4px solid var(--muted); }
+
+/* ── level box ── */
+.lvl-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+.lvl { background:var(--surf2); border:1px solid var(--bdr); border-radius:8px;
+       padding:10px; text-align:center; }
+.lvl-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.lvl-val   { font-size:18px; font-weight:700; margin-top:4px; }
+
+/* ── header strip ── */
+.hdr { display:flex; align-items:center; gap:20px; padding:8px 0 14px;
+       border-bottom:1px solid var(--bdr); margin-bottom:14px; flex-wrap:wrap; }
+.hdr-title { font-size:18px; font-weight:700; color:var(--txt); }
+.hdr-idx   { font-size:12px; color:var(--muted); }
+.hdr-val   { font-size:14px; font-weight:600; }
+
+/* ── summary badges (sidebar) ── */
+.sbadge { display:inline-flex; align-items:center; gap:4px;
+          border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; margin:2px; }
+.sb-entry { background:rgba(63,185,80,.15); color:var(--green); }
+.sb-exit  { background:rgba(248,81,73,.15); color:var(--red); }
+.sb-watch { background:rgba(139,148,158,.1); color:var(--muted); }
+
+/* ── hide streamlit chrome, collapse header space ── */
+#MainMenu, footer { visibility: hidden; }
+header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; overflow: hidden; }
+div[data-testid="stToolbar"] { display: none; }
+div[data-testid="stDecoration"] { display: none; }
+
+/* ── sidebar: always visible, never auto-collapse ── */
+section[data-testid="stSidebar"] {
+  display: flex !important;
+  visibility: visible !important;
+  min-width: 220px !important;
+  width: 260px !important;
+  transform: none !important;
+}
+/* ── sidebar expand/collapse button: always accessible ── */
+[data-testid="stSidebarCollapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 9999 !important;
+  background: var(--surf) !important;
+  border: 1px solid var(--bdr) !important;
+  border-left: none !important;
+  border-radius: 0 8px 8px 0 !important;
+  padding: 10px 6px !important;
+  box-shadow: 3px 0 10px rgba(0,0,0,.4) !important;
+}
+[data-testid="stSidebarCollapsedControl"] button {
+  color: var(--blue) !important;
+  font-size: 18px !important;
+  background: transparent !important;
+  border: none !important;
+}
+[data-testid="stSidebarCollapsedControl"]:hover {
+  background: var(--surf2) !important;
+}
+
+/* ── verdict color scale (no emoji) ── */
+.v-strong-bull { color: #3fb950; font-weight: 700; }
+.v-bull        { color: #85d498; font-weight: 600; }
+.v-neu         { color: #8b949e; font-weight: 500; }
+.v-bear        { color: #f97c77; font-weight: 600; }
+.v-strong-bear { color: #f85149; font-weight: 700; }
+
+/* ── watchlist panel ── */
+.wl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin:10px 0 20px; }
+.wl-card { background:var(--surf2); border:1px solid var(--bdr); border-radius:10px; padding:12px 14px; }
+.wl-card-name { font-size:13px; font-weight:700; color:var(--txt); }
+.wl-card-id   { font-size:10px; color:var(--muted); margin-top:1px; }
+.wl-card-price{ font-size:20px; font-weight:700; margin-top:6px; color:var(--txt); }
+.wl-card-pct  { font-size:12px; margin-top:2px; }
+.wl-card-sig  { font-size:11px; font-weight:600; margin-top:6px; }
+
+/* ── watchlist faux table ─────────────────────────────────────────────────── */
+/* :has(.wlt-start) scopes all rules below to the table container only         */
+
+/* name column: strip button chrome → plain bold text                          */
+[data-testid="stVerticalBlock"]:has(.wlt-start)
+  [data-testid="stColumn"]:first-child .stButton > button {
+  background:    transparent !important;
+  border:        none !important;
+  border-bottom: 1px solid var(--bdr) !important;
+  border-radius: 0 !important;
+  color:         var(--txt) !important;
+  font-weight:   700 !important;
+  font-size:     13px !important;
+  text-align:    left !important;
+  padding:       0 4px !important;
+  margin:        0 !important;
+  height:        46px !important;
+  width:         100% !important;
+}
+[data-testid="stVerticalBlock"]:has(.wlt-start)
+  [data-testid="stColumn"]:first-child .stButton > button:hover {
+  color:      var(--blue) !important;
+  background: rgba(88,166,255,0.04) !important;
+}
+
+/* delete column: minimal ✕ icon                                               */
+[data-testid="stVerticalBlock"]:has(.wlt-start)
+  [data-testid="stColumn"]:last-child .stButton > button[kind="secondary"] {
+  background:    transparent !important;
+  border:        none !important;
+  border-bottom: 1px solid var(--bdr) !important;
+  border-radius: 0 !important;
+  color:         var(--muted) !important;
+  font-size:     12px !important;
+  padding:       0 2px !important;
+  margin:        0 !important;
+  height:        46px !important;
+  width:         100% !important;
+}
+[data-testid="stVerticalBlock"]:has(.wlt-start)
+  [data-testid="stColumn"]:last-child .stButton > button[kind="secondary"]:hover {
+  color:      var(--red) !important;
+  background: transparent !important;
+}
+
+/* reduce row gap between st.columns groups → table-row feel                  */
+[data-testid="stVerticalBlock"]:has(.wlt-start)
+  > div > [data-testid="stHorizontalBlock"] {
+  margin-bottom: -6px !important;
+  gap:           4px !important;
+}
+
+/* ── button tweaks ── */
+.stButton > button {
+  background: var(--surf2) !important;
+  border: 1px solid var(--bdr) !important;
+  color: var(--muted) !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  margin-top: 2px !important;
+}
+.stButton > button:hover {
+  border-color: var(--blue) !important;
+  color: var(--txt) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+
+def main() -> None:
+    if not render_login_page():
+        return
+
+    stocks = load_db()
+    if not stocks:
+        stocks = [
+            {"stock_id": "2330.TW", "stock_name": "台積電",     "holding_status": False},
+            {"stock_id": "2303.TW", "stock_name": "聯電",       "holding_status": False},
+            {"stock_id": "2881.TW", "stock_name": "富邦金",     "holding_status": True},
+            {"stock_id": "2412.TW", "stock_name": "中華電",     "holding_status": False},
+            {"stock_id": "4943.TW", "stock_name": "康控-KY",    "holding_status": True},
+            {"stock_id": "3711.TW", "stock_name": "日月光投控", "holding_status": False},
+        ]
+        save_db(stocks)
+
+    groups = load_groups()
+
+    if "selected_stock" not in st.session_state:
+        st.session_state.selected_stock = stocks[0]["stock_id"] if stocks else ""
+
+    with st.sidebar:
+        username = st.session_state.get("username", "")
+        st.markdown(
+            f'<div style="font-size:12px;color:#8b949e;padding:6px 0 2px;">👤 {username}</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("登出", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+        st.markdown('<hr style="border-color:#30363d;margin:8px 0;">', unsafe_allow_html=True)
+
+    render_sidebar(stocks)
+
+    # Header
+    idx_val, idx_delta = fetch_index()
+    d_cls = "pos" if idx_delta.startswith("+") else "neg" if idx_delta.startswith("-") else "neu"
+    now_str = _dt.now().strftime("%Y-%m-%d %H:%M")
+
+    st.markdown(
+        f'<div class="hdr">'
+        f'<div class="hdr-title">雙 Agent 股票量化 · K 線型態智能監控儀表板</div>'
+        f'<div class="hdr-idx">加權 (TAIEX)</div>'
+        f'<div class="hdr-val">{idx_val}&nbsp;<span class="{d_cls}">{idx_delta}</span></div>'
+        f'<div class="hdr-idx" style="margin-left:auto;font-size:11px;">更新 {now_str}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Main tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "即時市場熱力圖",
+        "追蹤名單分析",
+        "觀察清單",
+        groups[0]["name"],
+        groups[1]["name"],
+    ])
+    with tab1:
+        render_heatmap_tab()
+    with tab2:
+        render_analysis_tab(stocks)
+    with tab3:
+        render_watchlist_table(display_stocks=stocks, tab_key="wl", title="全部觀察股票")
+    with tab4:
+        render_group_tab(stocks, 0, groups)
+    with tab5:
+        render_group_tab(stocks, 1, groups)
+
+    # ── Two-phase sidebar navigation: click main tab → click sub-tab ──────────
+    nav = st.session_state.get("_nav_step", 0)
+    if nav == 1:
+        # Phase 1: switch to 追蹤名單分析; next rerender will run phase 2
+        st.session_state._nav_step = 2
+        _components.html("""<script>
+setTimeout(function(){
+  var tabs=window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+  for(var i=0;i<tabs.length;i++){
+    if(tabs[i].textContent.trim()==='追蹤名單分析'){tabs[i].click();break;}
+  }
+},120);
+</script>""", height=1)
+    elif nav == 2:
+        # Phase 2: switch to 量化與籌碼特徵 sub-tab
+        st.session_state._nav_step = 0
+        _components.html("""<script>
+setTimeout(function(){
+  var tabs=window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+  for(var i=0;i<tabs.length;i++){
+    if(tabs[i].textContent.trim()==='量化與籌碼特徵'){tabs[i].click();break;}
+  }
+},120);
+</script>""", height=1)
+
+
+main()

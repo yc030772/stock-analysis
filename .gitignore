@@ -1,0 +1,11 @@
+data/
+stocks_db.json
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+venv/
+.venv/
+.env
+*.env
+.streamlit/secrets.toml
