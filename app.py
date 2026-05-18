@@ -255,6 +255,90 @@ div[data-testid="stDecoration"] { display: none; }
   border-color: var(--blue) !important;
   color: var(--txt) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE  ≤ 768px
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── reduce page padding ── */
+  .block-container { padding: 0.6rem 0.7rem 1rem !important; }
+
+  /* ── sidebar: native overlay width, not fixed ── */
+  section[data-testid="stSidebar"] { width: min(85vw, 300px) !important; }
+
+  /* ── header: stack vertically, hide timestamp ── */
+  .hdr {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 3px !important;
+    padding: 4px 0 8px !important;
+  }
+  .hdr-title { font-size: 14px !important; line-height: 1.3; }
+  .hdr-idx   { font-size: 12px !important; }
+  .hdr-val   { font-size: 13px !important; }
+  .hdr > div:last-child { display: none !important; }
+
+  /* ── tabs: horizontally scrollable, no wrap ── */
+  .stTabs [data-baseweb="tab-list"] {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none !important;
+    padding: 3px !important;
+  }
+  .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
+  .stTabs [data-baseweb="tab"] {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* ── touch targets: 44px min height ── */
+  .stButton > button {
+    min-height: 44px !important;
+    font-size: 14px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* ── KPI grid: 2 columns ── */
+  .kgrid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ── level box: 2 columns ── */
+  .lvl-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ── watchlist grid: 2 columns ── */
+  .wl-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ── font sizes: raise minimum ── */
+  .klabel    { font-size: 11px !important; }
+  .kval      { font-size: 18px !important; }
+  .sec-title { font-size: 11px !important; }
+  .scard-name, .wl-card-id { font-size: 12px !important; }
+  .rpt       { font-size: 13px !important; padding: 10px 12px !important; }
+
+  /* ── signal banner ── */
+  .sig-banner { font-size: 15px !important; padding: 10px 14px !important; }
+
+  /* ── remove horizontal margin on report cards ── */
+  .rpt, .kbox, .scard { margin-left: 0 !important; margin-right: 0 !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SMALL PHONES  ≤ 480px
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  /* ── watchlist: single column ── */
+  .wl-grid { grid-template-columns: 1fr !important; }
+
+  /* ── level box: also single column ── */
+  .lvl-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ── tighter block padding ── */
+  .block-container { padding: 0.4rem 0.5rem 1rem !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -265,29 +349,50 @@ _components.html(
     height=0,
 )
 
-# Persistent sidebar expand button — appears when sidebar is collapsed
+# Persistent sidebar expand button — slim tab on desktop, FAB on mobile
 _components.html("""
 <script>
 (function() {
   var doc = window.parent.document;
 
+  function ensureStyles() {
+    if (doc.getElementById('sb-btn-styles')) return;
+    var s = doc.createElement('style');
+    s.id = 'sb-btn-styles';
+    s.textContent = [
+      '#sb-expand-btn {',
+      '  position:fixed; left:0; top:50%; transform:translateY(-50%);',
+      '  z-index:99999; width:22px; height:48px; display:none;',
+      '  align-items:center; justify-content:center;',
+      '  background:var(--surf,#fff); border:1px solid var(--bdr,#dee2e6);',
+      '  border-left:none; border-radius:0 8px 8px 0;',
+      '  font-size:20px; color:var(--blue,#0d6efd); cursor:pointer;',
+      '  box-shadow:3px 0 8px rgba(0,0,0,.12); padding:0; line-height:1;',
+      '}',
+      '@media (max-width:768px) {',
+      '  #sb-expand-btn {',
+      '    left:12px !important; bottom:24px !important;',
+      '    top:auto !important; transform:none !important;',
+      '    width:48px !important; height:48px !important;',
+      '    border-radius:50% !important;',
+      '    border:1.5px solid var(--bdr,#dee2e6) !important;',
+      '    font-size:24px !important;',
+      '    box-shadow:0 4px 14px rgba(0,0,0,.2) !important;',
+      '  }',
+      '}'
+    ].join('');
+    doc.head.appendChild(s);
+  }
+
   function ensureBtn() {
+    ensureStyles();
     if (doc.getElementById('sb-expand-btn')) return;
     var btn = doc.createElement('button');
     btn.id = 'sb-expand-btn';
     btn.title = 'Expand sidebar';
     btn.innerHTML = '&#8250;';
-    btn.style.cssText = [
-      'position:fixed', 'left:0', 'top:50%', 'transform:translateY(-50%)',
-      'z-index:99999', 'width:22px', 'height:48px', 'display:none',
-      'align-items:center', 'justify-content:center',
-      'background:var(--surf,#fff)', 'border:1px solid var(--bdr,#dee2e6)',
-      'border-left:none', 'border-radius:0 8px 8px 0',
-      'font-size:20px', 'color:var(--blue,#0d6efd)', 'cursor:pointer',
-      'box-shadow:3px 0 8px rgba(0,0,0,.12)', 'padding:0', 'line-height:1'
-    ].join(';');
     btn.onmouseenter = function() { btn.style.background = 'var(--surf2,#f1f3f5)'; };
-    btn.onmouseleave = function() { btn.style.background = 'var(--surf,#fff)'; };
+    btn.onmouseleave = function() { btn.style.background = ''; };
     btn.onclick = function() {
       var toggle =
         doc.querySelector('[data-testid="stSidebarCollapsedControl"] button') ||
