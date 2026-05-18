@@ -46,12 +46,39 @@ def fetch_ohlcv(ticker: str, period: str = "180d") -> Optional[pd.DataFrame]:
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
+def _twse_name_map() -> dict[str, str]:
+    """Fetch all TWSE-listed stock Chinese names from TWSE OpenAPI (cached 24h)."""
+    import requests
+    names: dict[str, str] = {}
+    for url in [
+        "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+        "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis",
+    ]:
+        try:
+            r = requests.get(url, timeout=8)
+            for item in r.json():
+                code = item.get("Code") or item.get("SecuritiesCompanyCode") or ""
+                name = item.get("Name") or item.get("CompanyName") or ""
+                if code and name:
+                    names[code] = name
+        except Exception:
+            continue
+    return names
+
+
 def fetch_stock_name(ticker: str) -> str:
-    """Return best available display name: MOCK_MARKET → yfinance shortName → ticker."""
-    from db import lookup_name          # lazy import — avoids circular dep at load time
+    """Return best display name: DB → TWSE Chinese name → yfinance → ticker."""
+    from db import lookup_name
     known = lookup_name(ticker)
     if known:
         return known
+    upper = ticker.upper()
+    if ".TW" in upper:
+        code = upper.split(".")[0]
+        tw_name = _twse_name_map().get(code)
+        if tw_name:
+            return tw_name
     try:
         buf = io.StringIO()
         with contextlib.redirect_stderr(buf):
