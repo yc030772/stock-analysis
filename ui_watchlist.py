@@ -35,7 +35,7 @@ def _price_target(price: float | None, last: float | None) -> str:
     col = "var(--green)" if pct > 0 else "var(--red)" if pct < 0 else "var(--muted)"
     sign = "+" if pct > 0 else ""
     return (f'<b>{price:.2f}</b>'
-            f'<span style="color:{col};font-size:10px;margin-left:3px">{sign}{pct:.1f}%</span>')
+            f'<span style="color:{col};font-size:15px;margin-left:3px">{sign}{pct:.1f}%</span>')
 
 
 def _pct_html(pct: float | None) -> str:
@@ -54,7 +54,7 @@ def _build_table_html(rows_data: list) -> str:
         last = r.get("last")
         price_str = f"{last:.2f}" if last is not None else "—"
         held = (
-            ' <span style="font-size:9px;background:var(--blue);color:#fff;'
+            ' <span style="font-size:14px;background:var(--blue);color:#fff;'
             'padding:1px 5px;border-radius:3px;vertical-align:middle;'
             'font-weight:600">持有</span>'
             if s["holding_status"] else ""
@@ -62,7 +62,7 @@ def _build_table_html(rows_data: list) -> str:
         rows_html += (
             "<tr>"
             f'<td class="wl-col-name">{s["stock_name"]}{held}</td>'
-            f'<td style="color:var(--muted);font-size:12px">{s["stock_id"]}</td>'
+            f'<td style="color:var(--muted);font-size:18px">{s["stock_id"]}</td>'
             f'<td class="wl-col-num"><b>{price_str}</b>'
             f'<span style="margin-left:4px">{_pct_html(r.get("pct"))}</span></td>'
             f'<td class="wl-col-num">{_price_target(r.get("target1"), last)}</td>'
@@ -169,7 +169,7 @@ def render_watchlist_table(
     # ── Empty state ────────────────────────────────────────────────────────────
     if not display_stocks:
         st.markdown(
-            '<div style="color:var(--muted);padding:24px 0;text-align:center;font-size:13px;">'
+            '<div style="color:var(--muted);padding:24px 0;text-align:center;font-size:20px;">'
             '此清單尚無股票</div>',
             unsafe_allow_html=True,
         )
@@ -190,7 +190,7 @@ def render_watchlist_table(
         st.markdown(
             '<div style="margin-top:10px;padding:10px 14px;background:var(--surf2);'
             'border:1px solid var(--bdr);border-radius:8px;">'
-            '<div style="font-size:11px;font-weight:600;color:var(--muted);'
+            '<div style="font-size:17px;font-weight:600;color:var(--muted);'
             'margin-bottom:8px;letter-spacing:.4px">點擊刪除個股</div></div>',
             unsafe_allow_html=True,
         )

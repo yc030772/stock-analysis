@@ -416,7 +416,7 @@ def render_analysis_tab(stocks: list[dict]) -> None:
         # Final recommendation
         st.markdown('<div class="sec-title">最終操作建議</div>', unsafe_allow_html=True)
         st.markdown(
-            f'<div class="rpt {cls3}" style="font-size:14px;line-height:1.9;">'
+            f'<div class="rpt {cls3}" style="font-size:21px;line-height:1.9;">'
             f'{orch["recommendation"]}'
             f'</div>',
             unsafe_allow_html=True,
@@ -434,11 +434,11 @@ def render_analysis_tab(stocks: list[dict]) -> None:
                    else "長空" if ind["ma200"] else "資料不足")
         with c1:
             st.markdown("**短期 (均線+型態)**")
-            st.markdown(f'<div style="font-size:24px;font-weight:700;" class="{sb_cls}">{sb_text}</div>',
+            st.markdown(f'<div style="font-size:36px;font-weight:700;" class="{sb_cls}">{sb_text}</div>',
                         unsafe_allow_html=True)
         with c2:
             st.markdown("**長期 (MA200)**")
-            st.markdown(f'<div style="font-size:24px;font-weight:700;" class="{lb_cls}">{lb_text}</div>',
+            st.markdown(f'<div style="font-size:36px;font-weight:700;" class="{lb_cls}">{lb_text}</div>',
                         unsafe_allow_html=True)
 
 
@@ -506,7 +506,7 @@ def render_strategy_report(ticker: str, held: bool) -> None:
 
     st.markdown('<div class="sec-title">最終操作建議</div>', unsafe_allow_html=True)
     st.markdown(
-        f'<div class="rpt {cls3}" style="font-size:14px;line-height:1.9;">'
+        f'<div class="rpt {cls3}" style="font-size:21px;line-height:1.9;">'
         f'{orch["recommendation"]}'
         f'</div>',
         unsafe_allow_html=True,
@@ -523,9 +523,9 @@ def render_strategy_report(ticker: str, held: bool) -> None:
                else "長空" if ind["ma200"] else "資料不足")
     with c1:
         st.markdown("**短期 (均線+型態)**")
-        st.markdown(f'<div style="font-size:24px;font-weight:700;" class="{sb_cls}">{sb_text}</div>',
+        st.markdown(f'<div style="font-size:36px;font-weight:700;" class="{sb_cls}">{sb_text}</div>',
                     unsafe_allow_html=True)
     with c2:
         st.markdown("**長期 (MA200)**")
-        st.markdown(f'<div style="font-size:24px;font-weight:700;" class="{lb_cls}">{lb_text}</div>',
+        st.markdown(f'<div style="font-size:36px;font-weight:700;" class="{lb_cls}">{lb_text}</div>',
                     unsafe_allow_html=True)
