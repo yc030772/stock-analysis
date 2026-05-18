@@ -29,19 +29,35 @@ st.set_page_config(
 st.markdown("""
 <style>
 :root {
-  --bg:       #0d1117;
-  --surf:     #161b22;
-  --surf2:    #21262d;
-  --bdr:      #30363d;
-  --txt:      #c9d1d9;
-  --muted:    #8b949e;
-  --green:    #3fb950;
-  --red:      #f85149;
-  --blue:     #58a6ff;
-  --yellow:   #e3b341;
-  --purple:   #bc8cff;
-  --orange:   #f0883e;
-  --r:        10px;
+  --bg:     #f8f9fa;
+  --surf:   #ffffff;
+  --surf2:  #f1f3f5;
+  --bdr:    #dee2e6;
+  --txt:    #212529;
+  --muted:  #6c757d;
+  --green:  #198754;
+  --red:    #dc3545;
+  --blue:   #0d6efd;
+  --yellow: #d97706;
+  --purple: #7c3aed;
+  --orange: #f97316;
+  --r:      10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:     #0d1117;
+    --surf:   #161b22;
+    --surf2:  #21262d;
+    --bdr:    #30363d;
+    --txt:    #c9d1d9;
+    --muted:  #8b949e;
+    --green:  #3fb950;
+    --red:    #f85149;
+    --blue:   #58a6ff;
+    --yellow: #e3b341;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+  }
 }
 
 /* ── base ── */
@@ -54,6 +70,7 @@ section[data-testid="stSidebar"] > div:first-child {
   background: var(--surf) !important;
   border-right: 1px solid var(--bdr);
 }
+section[data-testid="stSidebar"] { width: 260px !important; }
 section[data-testid="stSidebar"] .block-container { padding: 1rem !important; }
 
 /* ── tabs ── */
@@ -82,14 +99,14 @@ section[data-testid="stSidebar"] .block-container { padding: 1rem !important; }
   padding: 9px 12px;
   margin-bottom: 3px;
 }
-.scard.active { border-color: var(--blue); background: #1c2a3a; }
+.scard.active { border-color: var(--blue); background: var(--surf2); }
 .scard-row1 { display: flex; justify-content: space-between; align-items: center; }
 .scard-id   { font-size: 14px; font-weight: 700; color: var(--txt); }
 .scard-sig  { font-size: 14px; }
 .scard-name { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .scard-row2 { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; }
-.held-tag   { background: rgba(88,166,255,.15); color: var(--blue);
-              border: 1px solid rgba(88,166,255,.3); border-radius: 4px;
+.held-tag   { background: rgba(13,110,253,.1); color: var(--blue);
+              border: 1px solid rgba(13,110,253,.25); border-radius: 4px;
               padding: 0px 6px; font-size: 10px; }
 
 /* ── kpi grid ── */
@@ -124,7 +141,7 @@ section[data-testid="stSidebar"] .block-container { padding: 1rem !important; }
 
 /* ── report card ── */
 .rpt      { background:var(--surf); border:1px solid var(--bdr); border-radius:var(--r);
-            padding:14px 18px; margin:8px 0; font-size:13px; line-height:1.7; }
+            padding:14px 18px; margin:8px 0; font-size:13px; line-height:1.7; color:var(--txt); }
 .rpt-bull { border-left: 4px solid var(--green); }
 .rpt-bear { border-left: 4px solid var(--red); }
 .rpt-neu  { border-left: 4px solid var(--muted); }
@@ -134,14 +151,14 @@ section[data-testid="stSidebar"] .block-container { padding: 1rem !important; }
 .lvl { background:var(--surf2); border:1px solid var(--bdr); border-radius:8px;
        padding:10px; text-align:center; }
 .lvl-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-.lvl-val   { font-size:18px; font-weight:700; margin-top:4px; }
+.lvl-val   { font-size:18px; font-weight:700; margin-top:4px; color:var(--txt); }
 
 /* ── header strip ── */
 .hdr { display:flex; align-items:center; gap:20px; padding:8px 0 14px;
        border-bottom:1px solid var(--bdr); margin-bottom:14px; flex-wrap:wrap; }
 .hdr-title { font-size:18px; font-weight:700; color:var(--txt); }
 .hdr-idx   { font-size:12px; color:var(--muted); }
-.hdr-val   { font-size:14px; font-weight:600; }
+.hdr-val   { font-size:14px; font-weight:600; color:var(--txt); }
 
 /* ── summary badges (sidebar) ── */
 .sbadge { display:inline-flex; align-items:center; gap:4px;
@@ -156,15 +173,7 @@ header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important;
 div[data-testid="stToolbar"] { display: none; }
 div[data-testid="stDecoration"] { display: none; }
 
-/* ── sidebar: always visible, never auto-collapse ── */
-section[data-testid="stSidebar"] {
-  display: flex !important;
-  visibility: visible !important;
-  min-width: 220px !important;
-  width: 260px !important;
-  transform: none !important;
-}
-/* ── sidebar expand/collapse button: always accessible ── */
+/* ── sidebar expand icon (shown when collapsed) ── */
 [data-testid="stSidebarCollapsedControl"] {
   display: flex !important;
   visibility: visible !important;
@@ -178,7 +187,7 @@ section[data-testid="stSidebar"] {
   border-left: none !important;
   border-radius: 0 8px 8px 0 !important;
   padding: 10px 6px !important;
-  box-shadow: 3px 0 10px rgba(0,0,0,.4) !important;
+  box-shadow: 3px 0 8px rgba(0,0,0,.15) !important;
 }
 [data-testid="stSidebarCollapsedControl"] button {
   color: var(--blue) !important;
@@ -190,12 +199,12 @@ section[data-testid="stSidebar"] {
   background: var(--surf2) !important;
 }
 
-/* ── verdict color scale (no emoji) ── */
-.v-strong-bull { color: #3fb950; font-weight: 700; }
-.v-bull        { color: #85d498; font-weight: 600; }
-.v-neu         { color: #8b949e; font-weight: 500; }
-.v-bear        { color: #f97c77; font-weight: 600; }
-.v-strong-bear { color: #f85149; font-weight: 700; }
+/* ── verdict color scale ── */
+.v-strong-bull { color: var(--green); font-weight: 700; }
+.v-bull        { color: var(--green); font-weight: 600; opacity: 0.8; }
+.v-neu         { color: var(--muted); font-weight: 500; }
+.v-bear        { color: var(--red);   font-weight: 600; opacity: 0.8; }
+.v-strong-bear { color: var(--red);   font-weight: 700; }
 
 /* ── watchlist panel ── */
 .wl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin:10px 0 20px; }
@@ -304,13 +313,13 @@ def main() -> None:
     with st.sidebar:
         username = st.session_state.get("username", "")
         st.markdown(
-            f'<div style="font-size:12px;color:#8b949e;padding:6px 0 2px;">👤 {username}</div>',
+            f'<div style="font-size:12px;color:var(--muted);padding:6px 0 2px;">👤 {username}</div>',
             unsafe_allow_html=True,
         )
         if st.button("登出", use_container_width=True):
             st.session_state.clear()
             st.rerun()
-        st.markdown('<hr style="border-color:#30363d;margin:8px 0;">', unsafe_allow_html=True)
+        st.markdown('<hr style="border-color:var(--bdr);margin:8px 0;">', unsafe_allow_html=True)
 
     render_sidebar(stocks)
 

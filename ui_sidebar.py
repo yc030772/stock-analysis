@@ -15,7 +15,7 @@ def render_sidebar(stocks: list[dict]) -> None:
     with st.sidebar:
         st.markdown(
             '<div style="font-size:17px;font-weight:700;padding:10px 0 6px;'
-            'border-bottom:1px solid #30363d;margin-bottom:10px;">追蹤名單</div>',
+            'border-bottom:1px solid var(--bdr);margin-bottom:10px;">追蹤名單</div>',
             unsafe_allow_html=True,
         )
 
