@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime as _dt
+from datetime import datetime as _dt, timedelta
 
+import extra_streamlit_components as stx
 import streamlit as st
 import streamlit.components.v1 as _components
 
+from cookie_auth import COOKIE_NAME, make_token, verify_token
 from db import load_db, save_db, load_groups
 from data import fetch_index
 from ui_login import render_login_page
@@ -335,6 +337,17 @@ div[data-testid="stDecoration"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
+# ── Cookie manager (renders hidden component; must come before any layout) ──
+_cm = stx.CookieManager(key="_sa_cm")
+
+# Auto-restore login from persistent cookie
+if not st.session_state.get("username"):
+    _tok = _cm.get_all().get(COOKIE_NAME)
+    if _tok:
+        _u = verify_token(_tok)
+        if _u:
+            st.session_state["username"] = _u
+
 # Apply theme to DOM on every render
 _theme = st.session_state.get("theme", "light")
 _components.html(
@@ -418,7 +431,7 @@ _components.html("""
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main() -> None:
-    if not render_login_page():
+    if not render_login_page(_cm):
         return
 
     stocks = load_db()
@@ -456,6 +469,7 @@ def main() -> None:
                 st.session_state.theme = "dark"
                 st.rerun()
         if st.button("登出", use_container_width=True):
+            _cm.delete(COOKIE_NAME)
             st.session_state.clear()
             st.rerun()
         st.markdown('<hr style="border-color:var(--bdr);margin:8px 0;">', unsafe_allow_html=True)

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 import streamlit as st
 
+from cookie_auth import COOKIE_NAME, COOKIE_DAYS, make_token
 from user_db import register, verify
 
 
-def render_login_page() -> bool:
+def render_login_page(cookie_manager) -> bool:
     """Render login/register UI. Returns True if already authenticated."""
     if st.session_state.get("username"):
         return True
@@ -27,7 +30,11 @@ def render_login_page() -> bool:
                 submitted = st.form_submit_button("登入", use_container_width=True, type="primary")
             if submitted:
                 if verify(username, password):
-                    st.session_state["username"] = username.strip().lower()
+                    uname = username.strip().lower()
+                    st.session_state["username"] = uname
+                    # Persist login in browser cookie for 30 days
+                    expires = datetime.now() + timedelta(days=COOKIE_DAYS)
+                    cookie_manager.set(COOKIE_NAME, make_token(uname), expires_at=expires)
                     st.rerun()
                 else:
                     st.error("帳號或密碼錯誤。")
