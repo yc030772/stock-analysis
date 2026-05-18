@@ -9,7 +9,10 @@ import streamlit as st
 
 
 def _conn():
-    return psycopg2.connect(st.secrets["DATABASE_URL"])
+    url = st.secrets["DATABASE_URL"]
+    if "sslmode" not in url:
+        url += "?sslmode=require"
+    return psycopg2.connect(url)
 
 
 def _hash(password: str, salt: str) -> str:
