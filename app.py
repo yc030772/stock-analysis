@@ -180,142 +180,56 @@ div[data-testid="stDecoration"] { display: none; }
 .v-bear        { color: var(--red);   font-weight: 600; opacity: 0.8; }
 .v-strong-bear { color: var(--red);   font-weight: 700; }
 
-/* ── watchlist panel ── */
-.wl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin:10px 0 20px; }
-.wl-card { background:var(--surf2); border:1px solid var(--bdr); border-radius:10px; padding:12px 14px; }
-.wl-card-name { font-size:13px; font-weight:700; color:var(--txt); }
-.wl-card-id   { font-size:10px; color:var(--muted); margin-top:1px; }
-.wl-card-price{ font-size:20px; font-weight:700; margin-top:6px; color:var(--txt); }
-.wl-card-pct  { font-size:12px; margin-top:2px; }
-.wl-card-sig  { font-size:11px; font-weight:600; margin-top:6px; }
 
-/* ── watchlist faux table ─────────────────────────────────────────────────── */
-/* :has(.wlt-start) scopes all rules below to the table container only         */
-
-/* name column: strip button chrome → plain bold text                          */
-[data-testid="stVerticalBlock"]:has(.wlt-start)
-  [data-testid="stColumn"]:first-child .stButton > button {
-  background:    transparent !important;
-  border:        none !important;
-  border-bottom: 1px solid var(--bdr) !important;
-  border-radius: 0 !important;
-  color:         var(--txt) !important;
-  font-weight:   700 !important;
-  font-size:     13px !important;
-  text-align:    left !important;
-  padding:       0 4px !important;
-  margin:        0 !important;
-  height:        46px !important;
-  width:         100% !important;
-}
-[data-testid="stVerticalBlock"]:has(.wlt-start)
-  [data-testid="stColumn"]:first-child .stButton > button:hover {
-  color:      var(--blue) !important;
-  background: rgba(88,166,255,0.04) !important;
-}
-
-/* delete column: minimal ✕ icon                                               */
-[data-testid="stVerticalBlock"]:has(.wlt-start)
-  [data-testid="stColumn"]:last-child .stButton > button[kind="secondary"] {
-  background:    transparent !important;
-  border:        none !important;
-  border-bottom: 1px solid var(--bdr) !important;
-  border-radius: 0 !important;
-  color:         var(--muted) !important;
-  font-size:     12px !important;
-  padding:       0 2px !important;
-  margin:        0 !important;
-  height:        46px !important;
-  width:         100% !important;
-}
-[data-testid="stVerticalBlock"]:has(.wlt-start)
-  [data-testid="stColumn"]:last-child .stButton > button[kind="secondary"]:hover {
-  color:      var(--red) !important;
-  background: transparent !important;
-}
-
-/* reduce row gap between st.columns groups → table-row feel                  */
-[data-testid="stVerticalBlock"]:has(.wlt-start)
-  > div > [data-testid="stHorizontalBlock"] {
-  margin-bottom: -6px !important;
-  gap:           4px !important;
-}
-
-/* ── watchlist v2: scrollable table with sticky name column ─────────────── */
-[data-testid="stVerticalBlock"]:has(.wlt2-start) {
-  overflow-x: auto !important;
+/* ── watchlist pure HTML table ────────────────────────────────────────────── */
+.wl-pure-tbl-wrap {
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--bdr);
   border-radius: 10px;
-  margin: 4px 0 16px;
+  margin: 4px 0 12px;
 }
-[data-testid="stVerticalBlock"]:has(.wlt2-start)
-  > div > [data-testid="stHorizontalBlock"] {
-  min-width: 520px;
-  flex-wrap: nowrap !important;
-  gap: 0 !important;
-  margin-bottom: 0 !important;
+.wl-pure-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--txt);
+  min-width: 780px;
 }
-[data-testid="stVerticalBlock"]:has(.wlt2-start)
-  > div > [data-testid="stHorizontalBlock"]
-  > [data-testid="stColumn"]:first-child {
+.wl-pure-tbl thead tr th {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  padding: 9px 12px;
+  border-bottom: 2px solid var(--bdr);
+  white-space: nowrap;
+  background: var(--surf);
+  text-align: left;
+}
+.wl-pure-tbl tbody tr td {
+  padding: 0 12px;
+  height: 44px;
+  border-bottom: 1px solid var(--bdr);
+  white-space: nowrap;
+  background: var(--surf);
+  vertical-align: middle;
+}
+.wl-pure-tbl tbody tr:last-child td { border-bottom: none; }
+.wl-pure-tbl tbody tr:hover td      { background: var(--surf2); }
+.wl-col-name {
+  font-weight: 700;
   position: sticky;
   left: 0;
-  z-index: 4;
-  background: var(--surf);
-  box-shadow: 2px 0 6px rgba(0,0,0,.06);
+  z-index: 2;
+  min-width: 90px;
+  max-width: 150px;
+  box-shadow: 2px 0 6px rgba(0,0,0,.05);
 }
-/* name button */
-[data-testid="stVerticalBlock"]:has(.wlt2-start)
-  [data-testid="stColumn"]:first-child .stButton > button {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid var(--bdr) !important;
-  border-radius: 0 !important;
-  color: var(--txt) !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  text-align: left !important;
-  padding: 0 10px !important;
-  height: 46px !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
-[data-testid="stVerticalBlock"]:has(.wlt2-start)
-  [data-testid="stColumn"]:first-child .stButton > button:hover {
-  color: var(--blue) !important;
-  background: rgba(13,110,253,.04) !important;
-}
-/* delete button (only rendered in edit mode, always last col) */
-[data-testid="stVerticalBlock"]:has(.wlt2-edit)
-  [data-testid="stColumn"]:last-child .stButton > button {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid var(--bdr) !important;
-  border-radius: 0 !important;
-  color: var(--muted) !important;
-  font-size: 14px !important;
-  padding: 0 !important;
-  height: 46px !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
-[data-testid="stVerticalBlock"]:has(.wlt2-edit)
-  [data-testid="stColumn"]:last-child .stButton > button:hover {
-  color: var(--red) !important;
-  background: rgba(220,53,69,.05) !important;
-}
-/* ── card view ── */
-.wl-card2 {
-  background: var(--surf2); border: 1px solid var(--bdr);
-  border-radius: 10px; padding: 14px 16px; margin-bottom: 4px;
-}
-.wl-card2-sel  { border-color: var(--blue) !important; background: var(--surf) !important; }
-.wl-card2-name { font-size: 14px; font-weight: 700; color: var(--txt); }
-.wl-card2-id   { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.wl-card2-price{ font-size: 22px; font-weight: 700; margin-top: 8px; color: var(--txt); }
-.wl-card2-pct  { font-size: 13px; margin-top: 3px; }
-.wl-card2-sig  { font-size: 12px; font-weight: 600; margin-top: 8px; }
+.wl-pure-tbl thead th.wl-col-name { z-index: 3; }
+.wl-pure-tbl tbody tr:hover td.wl-col-name { background: var(--surf2); }
+.wl-col-num { text-align: right; }
 
 /* ── button tweaks ── */
 .stButton > button {
