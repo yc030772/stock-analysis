@@ -7,91 +7,87 @@ from data import fetch_stock_name
 from db import save_db, save_groups, lookup_name
 
 
-# ── Colour helpers ─────────────────────────────────────────────────────────────
+# ── Value formatters ────────────────────────────────────────────────────────────
 
-_VERDICT_COLOR = {
-    "強烈看多":     "#3fb950",
-    "偏多":         "#85d498",
-    "盤整觀望":     "#8b949e",
-    "偏空":         "#f97c77",
-    "強烈看空":     "#f85149",
-    "看多型態主導": "#3fb950",
-    "看空型態主導": "#f85149",
-    "多空型態交錯": "#e3b341",
-    "無明顯型態":   "#8b949e",
-}
+def _arrow_cls(pct: float | None) -> tuple[str, str]:
+    if pct is None:  return ("—", "neu")
+    if pct > 0:      return ("▲", "pos")
+    if pct < 0:      return ("▼", "neg")
+    return ("–", "neu")
 
 
-def _v(text: str) -> str:
-    color = _VERDICT_COLOR.get(text, "#8b949e")
-    return f'<span style="color:{color};font-weight:600">{text}</span>'
+def _fmt_price(v: float | None) -> str:
+    return f"{v:,.2f}" if v is not None else "—"
 
 
-def _pct_html(pct: float | None) -> str:
+def _fmt_abs(last: float | None, pct: float | None) -> str:
+    if last is None or pct is None:
+        return '<span class="neu">—</span>'
+    chg = last * pct / 100
+    arrow, cls = _arrow_cls(pct)
+    return f'<span class="{cls}">{arrow}&thinsp;{abs(chg):.2f}</span>'
+
+
+def _fmt_pct(pct: float | None) -> str:
     if pct is None:
-        return '<span style="color:#8b949e">—</span>'
-    color = "#f85149" if pct > 0 else "#3fb950" if pct < 0 else "#8b949e"
-    return f'<span style="color:{color}">{pct:+.2f}%</span>'
+        return '<span class="neu">—</span>'
+    arrow, cls = _arrow_cls(pct)
+    return f'<span class="{cls}">{arrow}&thinsp;{abs(pct):.2f}%</span>'
 
 
-def _target_cell(price: float | None, last: float | None) -> str:
-    if price is None or last is None:
-        return "—"
-    pct = (price - last) / last * 100
-    col = "#3fb950" if pct > 0 else "#f85149" if pct < 0 else "#8b949e"
-    return (f"<span style='font-weight:700'>{price:.2f}</span>"
-            f"<span style='color:{col};font-size:11px;margin-left:4px'>{pct:+.1f}%</span>")
+_SIG_LABEL = {"entry": "入場", "exit": "出場", "watch": "觀察"}
+_SIG_CLASS = {"entry": "pos",  "exit": "neg",  "watch": "neu"}
 
 
-# ── Layout ─────────────────────────────────────────────────────────────────────
-
-_COL_SPEC = [3.5, 2.5, 2, 3, 3, 2, 2, 2, 3, 0.8]
-_HEADERS  = ["名稱", "代號", "現價", "短期目標價", "長期目標價",
-             "短期技術", "中期技術", "長期技術", "K 線型態", ""]
-
-_TH = ('font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;'
-       'letter-spacing:.6px;padding:6px 0 8px;border-bottom:2px solid var(--bdr);'
-       'white-space:nowrap;')
-_TD = ('font-size:13px;border-bottom:1px solid var(--bdr);'
-       'height:46px;padding:0 4px;'
-       'display:flex;flex-direction:column;justify-content:center;overflow:hidden;')
+def _fmt_sig(r: dict) -> str:
+    sc = r.get("sig_class", "watch")
+    return (f'<span class="{_SIG_CLASS[sc]}" style="font-weight:700">'
+            f'{_SIG_LABEL[sc]}</span>')
 
 
-# ── DB helpers ─────────────────────────────────────────────────────────────────
+# ── Cell style constants ────────────────────────────────────────────────────────
 
-def _do_delete(
-    stock_id: str,
-    display_stocks: list[dict],
-    group: dict | None,
-    groups: list[dict] | None,
-) -> None:
+_TH_L = (
+    'font-size:11px;font-weight:600;color:var(--muted);'
+    'text-transform:uppercase;letter-spacing:.5px;'
+    'padding:10px 10px;border-bottom:2px solid var(--bdr);'
+    'white-space:nowrap;background:var(--surf);text-align:left;'
+)
+_TH_R = _TH_L.replace('text-align:left;', 'text-align:right;')
+
+_TD   = (
+    'font-size:13px;border-bottom:1px solid var(--bdr);'
+    'height:46px;padding:0 10px;display:flex;align-items:center;'
+    'overflow:hidden;background:var(--surf);'
+)
+_TD_R   = _TD + 'justify-content:flex-end;'
+_TD_SEL = _TD + 'justify-content:flex-end;background:rgba(13,110,253,.04);'
+
+
+# ── DB helpers ──────────────────────────────────────────────────────────────────
+
+def _do_delete(stock_id, display_stocks, group, groups):
     if group is not None:
-        group["stocks"] = [sid for sid in group["stocks"] if sid != stock_id]
+        group["stocks"] = [s for s in group["stocks"] if s != stock_id]
         save_groups(groups)
     else:
         save_db([s for s in display_stocks if s["stock_id"] != stock_id])
         st.cache_data.clear()
 
 
-def _do_add(
-    ticker: str,
-    display_stocks: list[dict],
-    main_stocks: list[dict] | None,
-    group: dict | None,
-    groups: list[dict] | None,
-) -> None:
-    effective_main = main_stocks if main_stocks is not None else display_stocks
-    if ticker not in {s["stock_id"] for s in effective_main}:
+def _do_add(ticker, display_stocks, main_stocks, group, groups):
+    effective = main_stocks if main_stocks is not None else display_stocks
+    if ticker not in {s["stock_id"] for s in effective}:
         name = lookup_name(ticker) or fetch_stock_name(ticker)
-        effective_main.append({"stock_id": ticker, "stock_name": name, "holding_status": False})
-        save_db(effective_main)
+        effective.append({"stock_id": ticker, "stock_name": name, "holding_status": False})
+        save_db(effective)
         st.cache_data.clear()
     if group is not None and ticker not in group["stocks"]:
         group["stocks"].append(ticker)
         save_groups(groups)
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
+# ── Public API ──────────────────────────────────────────────────────────────────
 
 def render_watchlist_table(
     display_stocks: list[dict],
@@ -101,110 +97,208 @@ def render_watchlist_table(
     group: dict | None = None,
     groups: list[dict] | None = None,
 ) -> None:
-    if title:
-        st.markdown(f'<div class="sec-title">{title}</div>', unsafe_allow_html=True)
 
-    sel_key = f"{tab_key}_sel"
+    sel_key  = f"{tab_key}_sel"
+    edit_key = f"{tab_key}_edit"
+    view_key = f"{tab_key}_view"
 
-    # ── Search bar (add ticker) ────────────────────────────────────────────────
+    edit_mode = st.session_state.get(edit_key, False)
+    card_view = st.session_state.get(view_key, False)
+
+    # ── Control bar ────────────────────────────────────────────────────────────
+    ctrl_l, ctrl_r = st.columns([7, 1])
+    with ctrl_l:
+        if title:
+            st.markdown(
+                f'<div class="sec-title" style="margin-bottom:0;">{title}</div>',
+                unsafe_allow_html=True,
+            )
+    with ctrl_r:
+        ic1, ic2 = st.columns(2)
+        with ic1:
+            if st.button(
+                "≡" if card_view else "⊞",
+                key=f"{tab_key}_layout",
+                help="切換卡片 / 表格",
+                use_container_width=True,
+            ):
+                st.session_state[view_key] = not card_view
+                st.rerun()
+        with ic2:
+            if st.button(
+                "✓" if edit_mode else "✏",
+                key=f"{tab_key}_edit_btn",
+                help="完成" if edit_mode else "編輯清單",
+                type="primary" if edit_mode else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state[edit_key] = not edit_mode
+                st.rerun()
+
+    # ── Add-ticker form ────────────────────────────────────────────────────────
     with st.form(key=f"{tab_key}_add_form", clear_on_submit=True):
-        fc1, fc2 = st.columns([6, 1])
-        with fc1:
+        fa, fb = st.columns([6, 1])
+        with fa:
             new_id = st.text_input(
-                "新增股票",
-                placeholder="輸入代號後按 Enter 新增，例如 2330.TW 或 MU",
+                "新增",
+                placeholder="輸入代號，例如 2330.TW",
                 label_visibility="collapsed",
             )
-        with fc2:
-            submitted = st.form_submit_button("＋ 新增", use_container_width=True, type="primary")
-        if submitted and new_id.strip():
+        with fb:
+            added = st.form_submit_button("＋ 新增", use_container_width=True, type="primary")
+        if added and new_id.strip():
             _do_add(new_id.strip(), display_stocks, main_stocks, group, groups)
             st.rerun()
 
-    # ── Table (header + rows inside container so CSS scoping works) ────────────
-    with st.container():
-        # Marker div: CSS in app.py uses :has(.wlt-start) to scope button styles
-        st.markdown('<div class="wlt-start"></div>', unsafe_allow_html=True)
+    # ── Empty state ────────────────────────────────────────────────────────────
+    if not display_stocks:
+        st.markdown(
+            '<div style="color:var(--muted);padding:24px 0;text-align:center;font-size:13px;">'
+            '此清單尚無股票</div>',
+            unsafe_allow_html=True,
+        )
+        return
 
-        # Header row
-        hcols = st.columns(_COL_SPEC)
-        for col, h in zip(hcols, _HEADERS):
-            col.markdown(f'<div style="{_TH}">{h}</div>', unsafe_allow_html=True)
+    # ── Load signals ───────────────────────────────────────────────────────────
+    with st.spinner("載入訊號…"):
+        rows_data = [
+            (s, quick_signal(s["stock_id"], s["holding_status"]))
+            for s in display_stocks
+        ]
 
-        if not display_stocks:
-            st.markdown(
-                f'<div style="{_TD}color:var(--muted);padding-top:12px;">此清單尚無股票。</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            with st.spinner("載入分析資料..."):
-                rows_data = [
-                    (s, quick_signal(s["stock_id"], s["holding_status"]))
-                    for s in display_stocks
-                ]
+    # ── Render ─────────────────────────────────────────────────────────────────
+    if card_view:
+        _render_cards(rows_data, tab_key, edit_mode, display_stocks, group, groups)
+    else:
+        _render_table(rows_data, tab_key, edit_mode, display_stocks, group, groups)
 
-            for i, (s, r) in enumerate(rows_data):
-                last     = r["last"]
-                is_sel   = st.session_state.get(sel_key) == s["stock_id"]
-                sel_bg   = "background:rgba(88,166,255,0.06);" if is_sel else ""
-                td_style = f"{_TD}{sel_bg}"
-
-                t1_s  = _target_cell(r.get("target1"), last)
-                t2_s  = _target_cell(r.get("target2"), last)
-                sv_h  = _v(r.get("short_verdict",   "N/A"))
-                mv_h  = _v(r.get("mid_verdict",     "N/A"))
-                lv_h  = _v(r.get("long_verdict",    "N/A"))
-                pat_h = _v(r.get("pattern_verdict", "無明顯型態"))
-                price_s = f"{last:.2f}" if last is not None else "—"
-                pct_h   = _pct_html(r.get("pct"))
-                held_tag = ' <span class="held-tag">持有</span>' if s["holding_status"] else ""
-
-                cols = st.columns(_COL_SPEC)
-                with cols[0]:
-                    label = f"▸ {s['stock_name']}" if is_sel else s["stock_name"]
-                    if st.button(label, key=f"{tab_key}_row_{i}", use_container_width=True):
-                        st.session_state[sel_key] = None if is_sel else s["stock_id"]
-                        st.rerun()
-
-                for col, html in zip(cols[1:9], [
-                    f'<div style="{td_style}color:var(--muted);">{s["stock_id"]}{held_tag}</div>',
-                    f'<div style="{td_style}"><b>{price_s}</b><span style="font-size:11px;margin-left:4px">{pct_h}</span></div>',
-                    f'<div style="{td_style}">{t1_s}</div>',
-                    f'<div style="{td_style}">{t2_s}</div>',
-                    f'<div style="{td_style}">{sv_h}</div>',
-                    f'<div style="{td_style}">{mv_h}</div>',
-                    f'<div style="{td_style}">{lv_h}</div>',
-                    f'<div style="{td_style}">{pat_h}</div>',
-                ]):
-                    col.markdown(html, unsafe_allow_html=True)
-
-                with cols[9]:
-                    if st.button("✕", key=f"{tab_key}_del_{i}", use_container_width=True):
-                        if st.session_state.get(sel_key) == s["stock_id"]:
-                            st.session_state.pop(sel_key, None)
-                        _do_delete(s["stock_id"], display_stocks, group, groups)
-                        st.rerun()
-
-    # ── Strategy report ───────────────────────────────────────────────────────
+    # ── Strategy report ────────────────────────────────────────────────────────
     selected = st.session_state.get(sel_key)
     if selected:
         info = next((s for s in display_stocks if s["stock_id"] == selected), None)
         if info:
             st.markdown("---")
-            hdr_c, close_c = st.columns([9, 1])
-            with hdr_c:
+            rh, rc = st.columns([9, 1])
+            with rh:
                 st.markdown(
-                    f'<div class="sec-title">策略交叉驗證報告 — '
+                    f'<div class="sec-title">策略報告 — '
                     f'{info["stock_name"]} ({selected})</div>',
                     unsafe_allow_html=True,
                 )
-            with close_c:
-                if st.button("關閉", key=f"{tab_key}_close"):
+            with rc:
+                if st.button("✕ 關閉", key=f"{tab_key}_close"):
                     st.session_state.pop(sel_key, None)
                     st.rerun()
             from ui_analysis import render_strategy_report
             render_strategy_report(selected, info["holding_status"])
 
+
+# ── Table view ──────────────────────────────────────────────────────────────────
+
+def _render_table(rows_data, tab_key, edit_mode, display_stocks, group, groups):
+    sel_key  = f"{tab_key}_sel"
+    col_spec = [3, 2, 2, 2, 2, 0.6] if edit_mode else [3, 2, 2, 2, 2]
+    headers  = ["名稱", "現價", "漲跌", "漲跌%", "訊號"]
+    if edit_mode:
+        headers.append("")
+
+    marker = "wlt2-start wlt2-edit" if edit_mode else "wlt2-start"
+
+    with st.container():
+        st.markdown(f'<div class="{marker}"></div>', unsafe_allow_html=True)
+
+        hcols = st.columns(col_spec)
+        for i, (col, h) in enumerate(zip(hcols, headers)):
+            col.markdown(
+                f'<div style="{_TH_L if i == 0 else _TH_R}">{h}</div>',
+                unsafe_allow_html=True,
+            )
+
+        for i, (s, r) in enumerate(rows_data):
+            is_sel = st.session_state.get(sel_key) == s["stock_id"]
+            last   = r.get("last")
+            pct    = r.get("pct")
+            td_r   = _TD_SEL if is_sel else _TD_R
+
+            rcols = st.columns(col_spec)
+
+            with rcols[0]:
+                label = f"▸ {s['stock_name']}" if is_sel else s["stock_name"]
+                if st.button(label, key=f"{tab_key}_r{i}", use_container_width=True):
+                    st.session_state[sel_key] = None if is_sel else s["stock_id"]
+                    st.rerun()
+
+            rcols[1].markdown(
+                f'<div style="{td_r}"><b>{_fmt_price(last)}</b></div>',
+                unsafe_allow_html=True,
+            )
+            rcols[2].markdown(
+                f'<div style="{td_r}">{_fmt_abs(last, pct)}</div>',
+                unsafe_allow_html=True,
+            )
+            rcols[3].markdown(
+                f'<div style="{td_r}">{_fmt_pct(pct)}</div>',
+                unsafe_allow_html=True,
+            )
+            rcols[4].markdown(
+                f'<div style="{td_r}">{_fmt_sig(r)}</div>',
+                unsafe_allow_html=True,
+            )
+
+            if edit_mode:
+                with rcols[5]:
+                    if st.button("✕", key=f"{tab_key}_d{i}", use_container_width=True):
+                        if st.session_state.get(sel_key) == s["stock_id"]:
+                            st.session_state.pop(sel_key, None)
+                        _do_delete(s["stock_id"], display_stocks, group, groups)
+                        st.rerun()
+
+
+# ── Card view ───────────────────────────────────────────────────────────────────
+
+def _render_cards(rows_data, tab_key, edit_mode, display_stocks, group, groups):
+    sel_key = f"{tab_key}_sel"
+    n_cols  = min(len(rows_data), 3) or 1
+    cols    = st.columns(n_cols)
+
+    for i, (s, r) in enumerate(rows_data):
+        is_sel     = st.session_state.get(sel_key) == s["stock_id"]
+        last       = r.get("last")
+        pct        = r.get("pct")
+        sc         = r.get("sig_class", "watch")
+        arrow, cls = _arrow_cls(pct)
+        pct_str    = f"{arrow}&thinsp;{abs(pct):.2f}%" if pct is not None else "—"
+        held_dot   = "&nbsp;·&nbsp;持有" if s["holding_status"] else ""
+
+        with cols[i % n_cols]:
+            sel_cls = " wl-card2-sel" if is_sel else ""
+            st.markdown(
+                f'<div class="wl-card2{sel_cls}">'
+                f'<div class="wl-card2-name">{s["stock_name"]}</div>'
+                f'<div class="wl-card2-id">{s["stock_id"]}{held_dot}</div>'
+                f'<div class="wl-card2-price">{_fmt_price(last)}</div>'
+                f'<div class="wl-card2-pct"><span class="{cls}">{pct_str}</span></div>'
+                f'<div class="wl-card2-sig">'
+                f'<span class="{_SIG_CLASS[sc]}">{_SIG_LABEL[sc]}</span>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                "▸ 收起" if is_sel else "詳細",
+                key=f"{tab_key}_c{i}",
+                use_container_width=True,
+            ):
+                st.session_state[sel_key] = None if is_sel else s["stock_id"]
+                st.rerun()
+            if edit_mode:
+                if st.button("刪除", key=f"{tab_key}_cd{i}", use_container_width=True):
+                    if st.session_state.get(sel_key) == s["stock_id"]:
+                        st.session_state.pop(sel_key, None)
+                    _do_delete(s["stock_id"], display_stocks, group, groups)
+                    st.rerun()
+
+
+# ── Group tab ───────────────────────────────────────────────────────────────────
 
 def render_group_tab(
     all_stocks: list[dict],
@@ -215,8 +309,7 @@ def render_group_tab(
 
     with st.expander("設定群組", expanded=not bool(group["stocks"])):
         new_name = st.text_input(
-            "群組名稱", value=group["name"],
-            key=f"gname_{group_idx}",
+            "群組名稱", value=group["name"], key=f"gname_{group_idx}",
         )
         if new_name.strip() and new_name.strip() != group["name"]:
             groups[group_idx]["name"] = new_name.strip()
@@ -226,9 +319,9 @@ def render_group_tab(
         st.markdown("**選擇加入此群組的股票：**")
         changed = False
         n_cols  = min(len(all_stocks), 4) or 1
-        cols    = st.columns(n_cols)
+        gcols   = st.columns(n_cols)
         for j, s in enumerate(all_stocks):
-            with cols[j % n_cols]:
+            with gcols[j % n_cols]:
                 in_group = s["stock_id"] in group["stocks"]
                 checked  = st.checkbox(
                     f"{s['stock_name']} ({s['stock_id']})",
