@@ -171,31 +171,7 @@ header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important;
 div[data-testid="stToolbar"] { display: none; }
 div[data-testid="stDecoration"] { display: none; }
 
-/* ── sidebar expand icon (shown when collapsed) ── */
-[data-testid="stSidebarCollapsedControl"] {
-  display: flex !important;
-  visibility: visible !important;
-  position: fixed !important;
-  left: 0 !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  z-index: 9999 !important;
-  background: var(--surf) !important;
-  border: 1px solid var(--bdr) !important;
-  border-left: none !important;
-  border-radius: 0 8px 8px 0 !important;
-  padding: 10px 6px !important;
-  box-shadow: 3px 0 8px rgba(0,0,0,.15) !important;
-}
-[data-testid="stSidebarCollapsedControl"] button {
-  color: var(--blue) !important;
-  font-size: 18px !important;
-  background: transparent !important;
-  border: none !important;
-}
-[data-testid="stSidebarCollapsedControl"]:hover {
-  background: var(--surf2) !important;
-}
+/* stSidebarCollapsedControl is unreliable — handled by JS instead */
 
 /* ── verdict color scale ── */
 .v-strong-bull { color: var(--green); font-weight: 700; }
@@ -288,6 +264,55 @@ _components.html(
     f'<script>window.parent.document.documentElement.setAttribute("data-theme","{_theme}");</script>',
     height=0,
 )
+
+# Persistent sidebar expand button — appears when sidebar is collapsed
+_components.html("""
+<script>
+(function() {
+  var doc = window.parent.document;
+
+  function ensureBtn() {
+    if (doc.getElementById('sb-expand-btn')) return;
+    var btn = doc.createElement('button');
+    btn.id = 'sb-expand-btn';
+    btn.title = 'Expand sidebar';
+    btn.innerHTML = '&#8250;';
+    btn.style.cssText = [
+      'position:fixed', 'left:0', 'top:50%', 'transform:translateY(-50%)',
+      'z-index:99999', 'width:22px', 'height:48px', 'display:none',
+      'align-items:center', 'justify-content:center',
+      'background:var(--surf,#fff)', 'border:1px solid var(--bdr,#dee2e6)',
+      'border-left:none', 'border-radius:0 8px 8px 0',
+      'font-size:20px', 'color:var(--blue,#0d6efd)', 'cursor:pointer',
+      'box-shadow:3px 0 8px rgba(0,0,0,.12)', 'padding:0', 'line-height:1'
+    ].join(';');
+    btn.onmouseenter = function() { btn.style.background = 'var(--surf2,#f1f3f5)'; };
+    btn.onmouseleave = function() { btn.style.background = 'var(--surf,#fff)'; };
+    btn.onclick = function() {
+      var toggle =
+        doc.querySelector('[data-testid="stSidebarCollapsedControl"] button') ||
+        doc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+        doc.querySelector('button[aria-label*="sidebar"]') ||
+        doc.querySelector('button[aria-label*="Sidebar"]');
+      if (toggle) toggle.click();
+    };
+    doc.body.appendChild(btn);
+  }
+
+  function update() {
+    ensureBtn();
+    var btn = doc.getElementById('sb-expand-btn');
+    var sb  = doc.querySelector('[data-testid="stSidebar"]');
+    if (!btn || !sb) return;
+    var collapsed = sb.getBoundingClientRect().right < 20;
+    btn.style.display = collapsed ? 'flex' : 'none';
+  }
+
+  setInterval(update, 250);
+  update();
+})();
+</script>
+""", height=0)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
