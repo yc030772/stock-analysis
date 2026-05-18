@@ -43,21 +43,19 @@ st.markdown("""
   --orange: #f97316;
   --r:      10px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:     #0d1117;
-    --surf:   #161b22;
-    --surf2:  #21262d;
-    --bdr:    #30363d;
-    --txt:    #c9d1d9;
-    --muted:  #8b949e;
-    --green:  #3fb950;
-    --red:    #f85149;
-    --blue:   #58a6ff;
-    --yellow: #e3b341;
-    --purple: #bc8cff;
-    --orange: #f0883e;
-  }
+html[data-theme="dark"] {
+  --bg:     #0d1117;
+  --surf:   #161b22;
+  --surf2:  #21262d;
+  --bdr:    #30363d;
+  --txt:    #c9d1d9;
+  --muted:  #8b949e;
+  --green:  #3fb950;
+  --red:    #f85149;
+  --blue:   #58a6ff;
+  --yellow: #e3b341;
+  --purple: #bc8cff;
+  --orange: #f0883e;
 }
 
 /* ── base ── */
@@ -284,6 +282,13 @@ div[data-testid="stDecoration"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
+# Apply theme to DOM on every render
+_theme = st.session_state.get("theme", "light")
+_components.html(
+    f'<script>window.parent.document.documentElement.setAttribute("data-theme","{_theme}");</script>',
+    height=0,
+)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
@@ -316,6 +321,17 @@ def main() -> None:
             f'<div style="font-size:12px;color:var(--muted);padding:6px 0 2px;">👤 {username}</div>',
             unsafe_allow_html=True,
         )
+        _tc1, _tc2 = st.columns(2)
+        with _tc1:
+            if st.button("Light", use_container_width=True,
+                         type="primary" if _theme == "light" else "secondary"):
+                st.session_state.theme = "light"
+                st.rerun()
+        with _tc2:
+            if st.button("Dark", use_container_width=True,
+                         type="primary" if _theme == "dark" else "secondary"):
+                st.session_state.theme = "dark"
+                st.rerun()
         if st.button("登出", use_container_width=True):
             st.session_state.clear()
             st.rerun()
